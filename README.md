@@ -21,6 +21,7 @@ This repo contains Jupyter notebooks for quantizing Llama Instruct models to 4-b
    python3 -m venv .venv
    source .venv/bin/activate
    ```
+   
 5) If models are gated, export your HF token:
    ```bash
    export HUGGINGFACE_HUB_TOKEN=<token>
