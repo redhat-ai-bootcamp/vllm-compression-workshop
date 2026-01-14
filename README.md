@@ -10,9 +10,10 @@ This repo contains Jupyter notebooks for quantizing Llama Instruct models to 4-b
 ## Provision a GPU VM (example: Ubuntu + CUDA 12.x)
 1) Create a VM with an NVIDIA GPU (Ampere+), at least 80 GB disk, and Ubuntu 22.04.
 2) Install drivers/CUDA if not preinstalled. Verify with `nvidia-smi` (look for CUDA >= 12.x).
-3) Install Python 3.10+ and Git:
+3) Install system packages (Python venv + dev headers for Triton, build tools, Git):
    ```bash
-   sudo apt update && sudo apt install -y python3.10-venv git
+   sudo apt update
+   sudo apt install -y python3-venv python3-dev build-essential git
    ```
 4) Clone this repo and create a venv:
    ```bash
@@ -21,8 +22,12 @@ This repo contains Jupyter notebooks for quantizing Llama Instruct models to 4-b
    python3 -m venv .venv
    source .venv/bin/activate
    ```
-   
-5) If models are gated, export your HF token:
+5) Install Python dependencies:
+   ```bash
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt
+   ```
+6) If models are gated, export your HF token (or set it in the notebook cell):
    ```bash
    export HUGGINGFACE_HUB_TOKEN=<token>
    ```
@@ -47,7 +52,7 @@ This repo contains Jupyter notebooks for quantizing Llama Instruct models to 4-b
 
 ## Using the notebooks
 1) Open a notebook (`gptq_quantization.ipynb`, `awq_quantization.ipynb`, or `throughput_comparison.ipynb`).
-2) Run the first cell to install dependencies (this may take time and disk space).
+2) Run the first cell to install dependencies (or install `requirements.txt` in the venv).
 3) Adjust model IDs and calibration/benchmark settings for your hardware.
 4) Execute cells top-to-bottom.
 
@@ -59,6 +64,48 @@ This repo contains Jupyter notebooks for quantizing Llama Instruct models to 4-b
   ```bash
   vllm serve ./llama-gptq-w4a16 --max-model-len 4096 --tensor-parallel-size 1 --port 8000 --api-key dummy
   ```
+
+### Serving scripts
+Use the helper scripts in `scripts/` to start a vLLM OpenAI-compatible server.
+```bash
+# Quantized (AWQ, compressed-tensors)
+python scripts/serve_quantized.py --port 8000 --api-key dummy --quantization none
+
+# If you see a GPU free-memory error, lower utilization:
+python scripts/serve_quantized.py --port 8000 --api-key dummy --quantization none --gpu-memory-utilization 0.8
+
+# If you see CUDA OOM during warmup, reduce concurrency and context length:
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/serve_quantized.py --port 8000 --api-key dummy --quantization none \
+  --gpu-memory-utilization 0.7 --max-model-len 2048 --max-num-seqs 32
+
+# Base model
+python scripts/serve_unquantized.py --port 8001 --api-key dummy
+
+# Custom model/path
+python scripts/serve_vllm.py --model /path/to/model --quantization none --port 8002 --api-key dummy
+```
+
+### Batch evaluation + comparison (standard dataset + metric)
+Standard evaluation uses the XSum validation set with Rouge-L (F1). The `--model` flag must match
+the served model name reported by `curl http://localhost:8000/v1/models`.
+```bash
+python scripts/run_batch.py --base-url http://localhost:8000/v1 --model llama-awq-w4a16 \
+  --task xsum --tokenizer llama-awq-w4a16 --max-context-tokens 2048 --context-buffer 128 \
+  --output results/awq.jsonl --max-samples 1000
+
+python scripts/run_batch.py --base-url http://localhost:8001/v1 --model base-llama \
+  --task xsum --tokenizer meta-llama/Llama-3.2-1B-Instruct --max-context-tokens 2048 --context-buffer 128 \
+  --output results/base.jsonl --max-samples 1000
+```
+If you see a 400 context-length error, lower `--max-context-tokens` or `--max-tokens` (or
+reduce inputs with `--max-input-chars` or increase `--context-buffer`).
+
+Score Rouge-L locally:
+```bash
+python scripts/score_rouge.py --awq results/awq.jsonl --base results/base.jsonl
+```
+Then use the comparison cell at the bottom of `awq_quantization.ipynb` to compute Rouge-L.
 
 ### Throughput comparison (TensorRT-LLM vs vLLM)
 - Default model: `meta-llama/Meta-Llama-3-8B-Instruct`.
