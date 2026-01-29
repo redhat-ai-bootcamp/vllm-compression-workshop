@@ -34,10 +34,10 @@ This repo contains Jupyter notebooks for quantizing Llama Instruct models to 4-b
 
 ## Provision a GPU VM (RHEL 8/9 + CUDA)
 1) Create a VM with an NVIDIA GPU (Ampere+), at least 80 GB disk, and RHEL 8 or 9.
-2) Install Git + Python 3 + pip:
+2) Install Git + Python 3 + pip + venv/dev headers:
    ```bash
    sudo dnf update -y
-   sudo dnf install -y git python3 python3-pip
+   sudo dnf install -y git python3 python3-pip python3-devel
    ```
 3) Install NVIDIA driver (RHEL 8/9, network repo):
    ```bash
