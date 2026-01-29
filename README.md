@@ -32,30 +32,40 @@ This repo contains Jupyter notebooks for quantizing Llama Instruct models to 4-b
    export HUGGINGFACE_HUB_TOKEN=<token>
    ```
 
-## Provision a GPU VM (RHEL 8/9 + CUDA)
-1) Create a VM with an NVIDIA GPU (Ampere+), at least 80 GB disk, and RHEL 8 or 9.
+## Provision a GPU VM (RHEL 8/9/10 + CUDA)
+1) Create a VM with an NVIDIA GPU (Ampere+), at least 80 GB disk, and RHEL 8, 9, or 10.
 2) Install Git + Python 3 + pip + venv/dev headers:
    ```bash
    sudo dnf update -y
    sudo dnf install -y git python3 python3-pip python3-devel
    ```
-3) Install NVIDIA driver (RHEL 8/9, network repo):
+3) Install NVIDIA driver (RHEL 8/9/10, network repo):
    ```bash
    # Run only the block that matches your RHEL version
    # RHEL 8
    sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
    sudo dnf install -y dnf-plugins-core
    sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+   sudo dnf install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r)
 
    # RHEL 9
    sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
    sudo dnf install -y dnf-plugins-core
    sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
+   sudo dnf install -y kernel-devel-matched kernel-headers
+
+   # RHEL 10
+   sudo subscription-manager repos --enable=rhel-10-for-x86_64-appstream-rpms \
+     --enable=rhel-10-for-x86_64-baseos-rpms \
+     --enable=codeready-builder-for-rhel-10-x86_64-rpms
+   sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+   sudo dnf install -y dnf-plugins-core
+   sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo
+   sudo dnf install -y kernel-devel-matched kernel-headers
 
    # Common
-   sudo dnf install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r)
    sudo dnf clean expire-cache
-   sudo dnf module install -y nvidia-driver:latest-dkms
+   sudo dnf install -y cuda-drivers
    sudo reboot
    ```
 4) Verify the driver:
