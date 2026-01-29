@@ -32,6 +32,42 @@ This repo contains Jupyter notebooks for quantizing Llama Instruct models to 4-b
    export HUGGINGFACE_HUB_TOKEN=<token>
    ```
 
+## Provision a GPU VM (RHEL 8/9 + CUDA)
+1) Create a VM with an NVIDIA GPU (Ampere+), at least 80 GB disk, and RHEL 8 or 9.
+2) Install Git + Python 3 + pip:
+   ```bash
+   sudo dnf update -y
+   sudo dnf install -y git python3 python3-pip
+   ```
+3) Install NVIDIA driver (RHEL 8/9, network repo):
+   ```bash
+   # Run only the block that matches your RHEL version
+   # RHEL 8
+   sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+   sudo dnf install -y dnf-plugins-core
+   sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+
+   # RHEL 9
+   sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+   sudo dnf install -y dnf-plugins-core
+   sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
+
+   # Common
+   sudo dnf install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r)
+   sudo dnf clean expire-cache
+   sudo dnf module install -y nvidia-driver:latest-dkms
+   sudo reboot
+   ```
+4) Verify the driver:
+   ```bash
+   nvidia-smi
+   ```
+5) Create a venv:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
 ## VS Code + SSH to the VM
 1) Install the “Remote - SSH” extension in VS Code.
 2) Add your VM to `~/.ssh/config`, e.g.:
